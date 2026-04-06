@@ -11,6 +11,8 @@ More information can be found in the directories below:
 * [Bulk RNA-seq preprocessing](Bulk%20RNA-seq%20preprocessing)
 ----
 ### Bulk ATAC-seq
+* [Bulk ATAC-seq preprocessing](Bulk%20ATAC-seq%20preprocessing)
+
 ----
 ### scRNA-seq
 ----
