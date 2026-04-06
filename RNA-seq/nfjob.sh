@@ -1,18 +1,21 @@
-#!bin.bash
-
-#$ -S /bin/bash # the shell language when run via the job scheduler [IMPORTANT]
-#$ -cwd               # job should run in the current working directory
-#$ -pe smp 16 # the job will be allotted six slots (“cores”) on a single machine
-#$ -l mem_free=4G     # job requires up to 1 GiB of RAM per slot
-#$ -l scratch=100G     # job requires up to 2 GiB of local /scratch space
-#$ -l h_rt=72:00:00   # job requires up to 24 hours of runtime
+#!/bin/bash
+#$ -S /bin/bash
+#$ -cwd
+#$ -pe smp 16
+#$ -l mem_free=4G
+#$ -l scratch=100G
+#$ -l h_rt=72:00:00
 #$ -m bea
-#$ -M christopher.chen2@ucsf.edu
+#$ -M your.email@example.com
 
 module load openjdk/11
 
-nextflow run /wynton/group/wagner/chrispchen/nf-core-rnaseq-3.12.0/workflow --input /wynton/group/wagner/chrispchen/251007_CombineRNASeq/samplesheet.csv --outdir /wynton/group/wagner/chrispchen/251007_CombineRNASeq/out -profile singularity -params-file /wynton/group/wagner/chrispchen/251007_CombineRNASeq/nf_params.json -resume
+nextflow run /path/to/nf-core-rnaseq-3.12.0/workflow \
+  --input /path/to/project/samplesheet.csv \
+  --outdir /path/to/project/out \
+  -profile singularity \
+  -params-file /path/to/project/nf_params.json \
+  -resume
 
 ## End-of-job summary, if running as a job
-[[ -n "$JOB_ID" ]] && qstat -j "$JOB_ID"  # This is useful for debugging and usage purposes,
-                                          # e.g. "did my job exceed its memory request?"
+[[ -n "$JOB_ID" ]] && qstat -j "$JOB_ID"
