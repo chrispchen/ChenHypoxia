@@ -8,7 +8,7 @@ More information can be found in the directories below:
 
 ----
 ### Bulk RNA-seq
-* [Bulk RNA-seq preprocessing](Bulk RNA-seq preprocessing)
+* [Bulk RNA-seq preprocessing](Bulk%20RNA-seq%20preprocessing)
 ----
 ### Bulk ATAC-seq
 ----
