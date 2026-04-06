@@ -18,5 +18,6 @@ More information can be found in the directories below:
 * [scRNA-seq preprocessing](scRNA-seq%20preprocessing)
 ----
 ### Nano3p-seq
+* [Nano3p-seq preprocessing](Nano3p-seq%20preprocessing)
 ----
 
