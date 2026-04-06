@@ -1,10 +1,10 @@
 #!/bin/bash
 #$ -S /bin/bash
 #$ -cwd
-#$ -pe smp 16
-#$ -l mem_free=4G
-#$ -l scratch=100G
-#$ -l h_rt=72:00:00
+#$ -pe smp [number of cores]
+#$ -l mem_free=[ram in gb]
+#$ -l scratch=[scratch in gb]
+#$ -l h_rt=[runtime]
 #$ -m bea
 #$ -M your.email@example.com
 
