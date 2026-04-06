@@ -1,4 +1,4 @@
-## Description
+## RNA seq preprocessing
 
 This is the script and a paramter file used to run the NextFlow RNA seq pipeline.
 
