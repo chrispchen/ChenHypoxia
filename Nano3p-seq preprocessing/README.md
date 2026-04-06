@@ -1,5 +1,5 @@
 ## Nano3p-seq preprocessing
-These scripts go from raw pod5 files to a dataframe containing each read aligned 
+These scripts convert raw pod5 files to a dataframe containing each read aligned 
 to a gene, its estimated polyT tail length, and its composition.
 
 - `dorado.sh`: basecalling and demultiplexing (using Oxford Nanopore's Dorado)
