@@ -1,0 +1,454 @@
+---
+title: "Hypoxia_18hrsVs8hpf"
+output: html_document
+date: "a date in time"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Following Param Singh's github page https://github.com/param-p-singh/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/DiffBind_Deseq2.R
+
+## but with my precomputed diffbind files
+```
+
+```{r}
+#### Load libraries 
+
+library(DiffBind)
+library(GreyListChIP)
+library(csaw)
+library(tidyverse)
+library("clusterProfiler")
+library(ChIPseeker)
+library(GenomicAlignments)
+library('GenomicFeatures')
+library(TxDb.Drerio.UCSC.danRer11.refGene)
+library("readxl")
+library("org.Dr.eg.db")
+library(pathview)
+library(profileplyr)
+library(AnnotationDbi)
+library(rtracklayer)
+library(GenomicTools.fileHandler)
+library(GenomicRanges)
+```
+
+```{r}
+# Load up our variables, the hard part perhaps
+
+Numer <- "Anoxia_18hr" # sample of interest (Numerator)
+Denom <- "8hpf" # what a control should be(Denominator)
+
+OutPath <- "C:/your/path/"
+
+output_dir <- OutPath
+
+```
+
+
+```{r}
+samples <- read.csv(paste(OutPath, "SampleSheet.csv", sep = ""))
+#samples
+```
+
+
+```{r}
+# Load and read the sample sheet, peaks and metadata
+DBdata <- dba(sampleSheet=samples)
+DBdata
+```
+
+```{r}
+# calculate a binding matrix based on the read counts for every sample
+# Reads bam files also
+DBdata <- dba.count(DBdata) # Warning: Will take a while to run, if you just want to check quickly. Change csv file to just have one condition.
+DBdata
+```
+
+
+```{r}
+# group samples based on condition for contrast 
+# Also have to set the minMembers parameter to 2 
+DBdata <- dba.contrast(DBdata, categories=DBA_CONDITION, minMembers = 2)
+DBdata
+```
+
+
+```{r}
+# run the main function (dba.analyze) of DiffBind that performs differential binding
+# Use both methods for comparison
+DBdata <- dba.analyze(DBdata, method = DBA_DESEQ2)
+DBdata <- dba.analyze(DBdata, method = DBA_EDGER)
+DBdata
+```
+
+
+```{r}
+# **** Extract the consensus peak set for all samples and the RPKM counts for each condition
+# I rearranged columns in the beginning to make it compatible with bed format
+consensusPeaks = dba.peakset(DBdata, peak.format = "bed", consensus = T, bRetrieve = T)
+consensusPeaksDF = data.frame(chromosome=seqnames(consensusPeaks),
+                              starts=start(consensusPeaks), 
+                              ends=end(consensusPeaks),
+                              names=paste0("peak_", names(consensusPeaks)),
+                              scores=c(rep("0", length(consensusPeaks))),
+                              strand=strand(consensusPeaks),
+                              consensusPeaks)
+write.table(consensusPeaksDF, file = paste0(OutPath, "consensusPeaks_rpkm.txt"), sep = "\t", quote = F, row.names = F) 
+```
+
+```{r}
+# Extract the RPKM, read counts etc. for each sample 
+# This is same as above but has more information.
+for (i in as.numeric(rownames(dba.show(DBdata)))){ # I am getting the rownames for each sample that runs from 1 to 10
+  
+  print (i)
+  print (DBdata$samples$SampleID[i]) # get the sample id for the name of file
+  sampleid = DBdata$samples$SampleID[i]
+  countfilename = paste0(OutPath, sampleid, "_Readcounts.txt")
+  
+  # DBdata$peaks[1:10] have the count matrices that I need, so print them to files called read counts
+  write.table(DBdata$peaks[i], file = countfilename, sep = "\t", quote = F, row.names = F)
+}
+rm(i)
+
+```
+
+```{r}
+# Output the number of peaks 
+DEcounts = dba.show(DBdata, bContrasts = T)
+write.csv(DEcounts, file = paste0(OutPath, "DEcounts.csv"), quote = F)
+```
+
+
+```{r}
+# # Plot heat map and binding affinity correlation using only the differentially bound sites.
+pdf(paste0(OutPath, "Correlation_matrix.pdf"))
+dba.plotHeatmap(DBdata, correlations=T, method = DBA_DESEQ2)
+```
+
+```{r}
+pdf(paste0(OutPath, "Binding-affinity_DEseq2.pdf"))
+dba.plotHeatmap(DBdata, correlations=F, scale = "row", method = DBA_DESEQ2)
+```
+
+```{r}
+pdf(paste0(OutPath, "Global_PCA.pdf"))
+dba.plotPCA(DBdata)
+```
+
+
+```{r}
+DEcounts[1,3]
+```
+
+
+
+```{r}
+# Do specific stuff for contrasts -- using ***DBA_DESEQ2*** 
+for (i in 1:length(DEcounts[,1])){
+  
+  filename = paste0(OutPath, DEcounts[i,1], "-", DEcounts[i,3]) 
+  print (filename)
+  
+  # # Plot and save contrast specific files 
+  # # Specific PCA
+   pdf(paste0(filename, "_PCA_DEseq2.pdf"))
+   dba.plotPCA(DBdata, contrast = i, method = DBA_DESEQ2)
+  # dev.off()
+
+  # Boxplots for the read distribution differences between the classes for selected contrasts.
+  # The first two boxes show distribution of reads over all differentially bound sites; 
+  # the middle two show differences on those sites where the affinity increases and the two boxes on the right show differences where the affinity increases in
+  # highlighted samples 
+  pdf(paste0(filename, "_Read-distribution_DEseq2.pdf"))
+  dba.plotBox(DBdata, contrast = i, method = DBA_DESEQ2)
+#  dev.off() 
+  
+  # display the binding affinity heatmap to see the binding patterns across the identified regions. You can control
+  pdf(paste0(filename, "_Binding-affinity_DEseq2.pdf"))
+  dba.plotHeatmap(DBdata, contrast=i, correlations=F, method = DBA_DESEQ2)
+#  dev.off() 
+
+  pdf(paste0(filename, "_Correlation_DEseq2.pdf"))
+  dba.plotHeatmap(DBdata, contrast=i, correlations=T, method = DBA_DESEQ2)
+#  dev.off() 
+  
+  # MA plots
+  pdf(paste0(filename, "_MA_DEseq2.pdf"))
+  dba.plotMA(DBdata, contrast = i, method = DBA_DESEQ2)
+#  dev.off()
+  
+  # Volcano plots
+  pdf(paste0(filename, "_Volcano_DEseq2.pdf"))
+  dba.plotVolcano(DBdata, contrast = i, method = DBA_DESEQ2)  
+#  dev.off()
+  
+  # *********************************************
+  # report the differentially bound peak regions, identified by either method (DESeq2/edgeR)
+  report = dba.report(DBdata, contrast = i, method=DBA_DESEQ2, )
+
+  # Export 3 bed files - up, down and all DE sites
+  # First make a data frame with column order as in bed file. Based on https://www.biostars.org/p/89341/
+  df1 <- data.frame(seqnames=seqnames(report),
+                    starts=start(report)-1, # BED uses 0-based coordinates so do -1 from start
+                    ends=end(report),
+                    names=paste0("peak_", names(report)), # Peak names. These are consistent for all consensus peaks
+                    scores=c(rep("0", length(report))),
+                    strand=c(rep(".", length(report))),
+                    fold=elementMetadata(report)$Fold
+  )
+  # Then write 3 bed files. Select columns 1:6 and avoid fold change. you can uncomment for checking 
+  write.table(df1[df1$fold > 1.5,1:6], file = paste0(filename, "_DE-up_DEseq2.bed"), sep = "\t", quote = F, row.names = F)
+  write.table(df1[df1$fold < -1.5,1:6], file = paste0(filename, "_DE-down_DEseq2.bed"), sep = "\t", quote = F, row.names = F)
+  write.table(df1[,1:6], file = paste0(filename, "_DE-all_Deseq2.bed"), sep = "\t", quote = F, row.names = F)
+  
+  # Make another data frame to get additional columns, FDR, p-values etc.
+  df2 = data.frame(report)
+  df2$start = df2$start - 1 # BED uses 0-based coordinates so do -1 from start
+  
+  # Write a csv file with all columns  
+  finaldf = data.frame(df1[,1:6], df2[,c(4,6:11)])
+  write.table(finaldf, file = paste0(filename, "_DE-all_Deseq2.csv"), sep = ",", quote = F, row.names = F)
+  
+  rm(filename, report, df1, df2, finaldf) # remove variables for next run
+}
+```
+
+```{r}
+# Annotation with chipseeker https://github.com/param-p-singh/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/annotate-peaks_ChIPseeker.R
+```
+
+```{r}
+finaldf <- read.csv("C:/your/path/Condition-2_DE-all_Deseq2.csv")
+```
+
+
+
+
+```{r}
+gtf_file = "C:/path/to/v4.3.2.gtf"
+```
+
+
+```{r}
+txdb = makeTxDbFromGFF(gtf_file)
+```
+
+```{r}
+genes(txdb)
+```
+
+```{r}
+# Annotate all peaks and write their annotation in a new file
+consensus = readPeakFile(paste0(OutPath, "consensusPeaks_rpkm.txt"))
+annoList = annotatePeak(consensusPeaks, TxDb=txdb)
+peakAnnotations = annoList@anno
+write.table(mcols(peakAnnotations), file = paste0(OutPath, "consensusPeaks_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+
+plotAnnoBar(annoList)
+```
+
+
+```{r}
+### MUST DELETE FIRST ROW OF BED FILES FOR THIS TO WORK
+dpup = paste0(output_dir, "Condition-2_DE-down_DEseq2.bed")
+anno_dpup = annotatePeak(dpup, TxDb=txdb)
+peakAnnotations_dpup = anno_dpup@anno
+write.table(mcols(peakAnnotations_dpup), file = paste0(output_dir, "Condition-2_DE-down_DEseq2_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+# # escape up is diapause down
+dpdown = paste0(output_dir, "Condition-2_DE-up_DEseq2.bed")
+anno_dpdown = annotatePeak(dpdown, TxDb=txdb)
+peakAnnotations_dpdown = anno_dpdown@anno
+write.table(mcols(peakAnnotations_dpdown), file = paste0(output_dir, "Condition-2_DE-up_DEseq2_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+# 
+```
+
+```{r}
+# Read the BED file into a data frame
+bed_data = read.table(dpup, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+
+# Remove the first row
+bed_data = bed_data[-1, ]
+
+# Write the modified data frame back to a file
+write.table(bed_data, file = dpup, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+# Now proceed with the annotation
+anno_dpup = annotatePeak(dpup, TxDb=txdb)
+peakAnnotations_dpup = anno_dpup@anno
+write.table(mcols(peakAnnotations_dpup), file = paste0(output_dir, "Condition-2_DE-down_DEseq2_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+```
+
+
+
+```{r}
+# Path to the input BED file
+dpdown = paste0(output_dir, "Condition-2_DE-up_DEseq2.bed")
+
+# Read the BED file into a data frame
+bed_data = read.table(dpdown, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+
+# Remove the first row
+bed_data = bed_data[-1, ]
+
+# Write the modified data frame back to a file
+write.table(bed_data, file = dpdown, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+# Now proceed with the annotation
+anno_dpdown = annotatePeak(dpdown, TxDb=txdb)
+peakAnnotations_dpdown = anno_dpdown@anno
+write.table(mcols(peakAnnotations_dpdown), file = paste0(output_dir, "Condition-2_DE-up_DEseq2_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+```
+
+
+```{r}
+# Annotate all the peaks for DE peak files  ----------------------------
+#### THESE ARE UP BASED ON THE FIRST CONDITION
+# If there is an error here it's most likely due to 1st row in bed file being a header row. Just delete that and it should run
+
+
+### MUST DELETE FIRST ROW OF BED FILES FOR THIS TO WORK
+
+# List of BED files
+DE_peaks <- list(
+  Up = paste0(OutPath, "Condition-2_DE-up_DEseq2.bed"),
+  Down = paste0(OutPath, "Condition-2_DE-down_DEseq2.bed"),
+  All = paste0(OutPath, "Condition-2_DE-all_DEseq2.bed")
+)
+
+# Loop through each file in the list
+for (key in names(DE_peaks)) {
+  # Get the file path
+  file_path = DE_peaks[[key]]
+  
+  # Read the BED file into a data frame
+  bed_data = read.table(file_path, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+  
+  # Remove the first row
+  bed_data = bed_data[-1, ]
+  
+  # Overwrite the original file (or save to a new file if preferred)
+  write.table(bed_data, file = file_path, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+  
+  # Print a message to confirm the file was processed
+  cat("Processed:", file_path, "\n")
+}
+
+
+
+DE_peaks <- list(Up = paste0(OutPath, "Condition-2_DE-up_DEseq2.bed"),
+                 Down = paste0(OutPath, "Condition-2_DE-down_DEseq2.bed"),
+                 All =  paste0(OutPath, "Condition-2_DE-all_DEseq2.bed"))
+
+
+DEpeaksAnno <- lapply(DE_peaks, annotatePeak, TxDb=txdb,
+                      tssRegion=c(-2000, 2000), verbose=FALSE)
+
+
+
+
+df(paste0(output_dir, "FeatureAnnotations_DEPeaks_selected_conditions.pdf"))
+```
+
+
+```{r}
+plotAnnoBar(DEpeaksAnno)
+```
+
+
+```{r}
+Lawson <- read_excel("C:/Users/chris/Downloads/elife-55792-fig3-data6-v2.xlsx")
+Lawson <- data.frame(Lawson)
+Lawson <- Lawson[, c('LLgeneID', 'EnsdargID', 'ID')]
+colnames(Lawson) <- c('gene_id', 'EnsdargID', 'gene_name')
+head(Lawson)
+
+```
+
+
+
+
+```{r}
+# Load the data
+up_annotations <- read.table(paste0(output_dir, "Condition-2_DE-up_DEseq2_annotations.txt"), header = TRUE, sep = "\t")
+down_annotations <- read.table(paste0(output_dir, "Condition-2_DE-down_DEseq2_annotations.txt"), header = TRUE, sep = "\t")
+```
+
+```{r}
+# Merge the up-regulated annotations with Lawson data
+up_annotations_with_gene_name <- merge(up_annotations, Lawson[, c("gene_id", "gene_name")], 
+                                       by.x = "geneId", by.y = "gene_id", all.x = TRUE)
+
+# Merge the down-regulated annotations with Lawson data
+down_annotations_with_gene_name <- merge(down_annotations, Lawson[, c("gene_id", "gene_name")], 
+                                         by.x = "geneId", by.y = "gene_id", all.x = TRUE)
+```
+
+
+
+```{r}
+write_csv(up_annotations_with_gene_name, paste0(output_dir, "Condition-2_DE-up_DEseq2_annotations_genename.csv"))
+write_csv(down_annotations_with_gene_name, paste0(output_dir, "Condition-2_DE-down_DEseq2_annotations_genename.csv"))
+```
+
+```{r}
+# Path to the input BED file
+dpdown = paste0(output_dir, "Condition-2_DE-all_DEseq2.bed")
+
+# Read the BED file into a data frame
+bed_data = read.table(dpdown, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+
+# Remove the first row
+bed_data = bed_data[-1, ]
+
+# Write the modified data frame back to a file
+write.table(bed_data, file = dpdown, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+# Now proceed with the annotation
+anno_dpdown = annotatePeak(dpdown, TxDb=txdb)
+peakAnnotations_dpdown = anno_dpdown@anno
+write.table(mcols(peakAnnotations_dpdown), file = paste0(output_dir, "Condition-2_DE-all_DEseq2_annotations.txt"), quote = F, sep = "\t", row.names = F, col.names = T)
+```
+
+
+```{r}
+all_annotations <- read.table(paste0(output_dir, "Condition-2_DE-all_DEseq2_annotations.txt"), header = TRUE, sep = "\t")
+
+all_annotations_with_gene_name <- merge(all_annotations, Lawson[, c("gene_id", "gene_name")], 
+                                       by.x = "geneId", by.y = "gene_id", all.x = TRUE)
+write_csv(all_annotations_with_gene_name, paste0(output_dir, "Condition-2_DE-all_DEseq2_annotations_genename.csv"))
+```
+
+
+```{r}
+first = read_csv(paste0(output_dir, "Condition-2_DE-all_DEseq2.csv"))
+labeled = read_csv(paste0(output_dir, "Condition-2_DE-all_DEseq2_annotations_genename.csv"))
+
+# Merge the dataframes
+merged_df <- merge(first, labeled[, c("V4", "gene_name")], 
+                   by.x = "names", by.y = "V4", all.x = TRUE)
+
+write_csv(merged_df, paste0(output_dir, "Condition-2_DE-all_DEseq2_with_genename.csv"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
