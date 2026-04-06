@@ -8,7 +8,7 @@
 #$ -M your.email@example.com
 
 nextflow run /path/to/nf-core-atacseq-2.0/workflow \
-  --input /path/to/project/inputpath.csv \
+  --input /path/to/project/samplesheet.csv \
   --outdir /path/to/project/output_GRCz11 \
   --fasta /path/to/genomes/danRer11.primary.fa \
   --gtf /path/to/genomes/V4.3.2.gtf \
