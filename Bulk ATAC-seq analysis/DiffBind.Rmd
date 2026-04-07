@@ -254,7 +254,13 @@ plotAnnoBar(annoList)
 
 
 ```{r}
-### MUST DELETE FIRST ROW OF BED FILES FOR THIS TO WORK
+for (f in c(paste0(output_dir, "Condition-2_DE-down_DEseq2.bed"),
+            paste0(output_dir, "Condition-2_DE-up_DEseq2.bed"))) {
+  bed <- read.table(f, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+  bed <- bed[-1, ]  # remove header row
+  write.table(bed, file = f, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+}
+
 dpup = paste0(output_dir, "Condition-2_DE-down_DEseq2.bed")
 anno_dpup = annotatePeak(dpup, TxDb=txdb)
 peakAnnotations_dpup = anno_dpup@anno
@@ -361,7 +367,7 @@ plotAnnoBar(DEpeaksAnno)
 
 
 ```{r}
-Lawson <- read_excel("C:/Users/chris/Downloads/elife-55792-fig3-data6-v2.xlsx")
+Lawson <- read_excel("C:/your/path/elife-55792-fig3-data6-v2.xlsx")
 Lawson <- data.frame(Lawson)
 Lawson <- Lawson[, c('LLgeneID', 'EnsdargID', 'ID')]
 colnames(Lawson) <- c('gene_id', 'EnsdargID', 'gene_name')
