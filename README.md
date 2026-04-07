@@ -15,8 +15,10 @@ More information can be found in the directories below:
 ### Bulk ATAC-seq
 * [Bulk ATAC-seq preprocessing](Bulk%20ATAC-seq%20preprocessing)
 
-    Nextflow pipeline from FASTQ to peak 
+    Nextflow pipeline for ATAC seq processing
 * [Bulk ATAC-seq analysis](Bulk%20ATAC-seq%20analysis)
+
+  Differential accessibility analysis
 ----
 ### scRNA-seq
 * [scRNA-seq preprocessing](scRNA-seq%20preprocessing)
