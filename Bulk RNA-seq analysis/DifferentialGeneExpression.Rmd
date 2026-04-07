@@ -9,10 +9,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# I used these as reference points: 
+# I used this as a reference point:
 # https://scienceparkstudygroup.github.io/rna-seq-lesson/06-differential-analysis/index.html
-# https://hbctraining.github.io/DGE_workshop_salmon_online/lessons/11_FA_functional_class_scoring.html
-# https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```
 
 ```{r}
