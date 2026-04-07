@@ -4,4 +4,4 @@
 
 `DiffBind.Rmd` R markdown, imports .bam from nextflow, performs DiffBind (differential accessibility) analysis and annotates peaks.
 
-The DiffBind.Rmd was based off of Param Singh's github: [DiffBind_Deseq2.R](https://github.com/SinghLabUCSF/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/DiffBind_Deseq2.R) and [annotate-peaks_ChIPseeker.R](# Annotation with chipseeker https://github.com/param-p-singh/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/annotate-peaks_ChIPseeker.R) 
+The DiffBind.Rmd was based off of Param Singh's github: [DiffBind_Deseq2.R](https://github.com/SinghLabUCSF/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/DiffBind_Deseq2.R) and [annotate-peaks_ChIPseeker.R](https://github.com/param-p-singh/Diapause-multiomics/blob/master/3_ATAC-seq/2_Analysis/annotate-peaks_ChIPseeker.R) 
