@@ -9,37 +9,24 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# I used this as reference point: https://scienceparkstudygroup.github.io/rna-seq-lesson/06-differential-analysis/index.html
+# I used these as reference points: 
+# https://scienceparkstudygroup.github.io/rna-seq-lesson/06-differential-analysis/index.html
+# https://hbctraining.github.io/DGE_workshop_salmon_online/lessons/11_FA_functional_class_scoring.html
+# https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```
 
 ```{r}
 # Import libraries
-library("DESeq2")
-library("tidyverse")
-library("ggplot2")
-library("readr")
-library("dplyr")
-library("apeglm")
-library("EnhancedVolcano")
-library("pheatmap")
-library("tibble")
-library("genefilter")
-library("RColorBrewer")
-library("PoiClaClu")
-library("glmpca")
-library("AnnotationDbi")
-library("org.Dr.eg.db")
-library("readxl")
-library("ggbeeswarm")
-library("edgeR")
-library("clusterProfiler")
-library("enrichplot")
-library("pathview")
-library("msigdbr")
-library("babelgene")
-library("pathview")
-library("gage")
-library("gageData")
+library(DESeq2)        
+library(tidyverse)    
+library(EnhancedVolcano)
+library(pheatmap)
+library(RColorBrewer)
+library(PoiClaClu)     
+library(genefilter)    
+library(readxl)       
+library(apeglm)        
+library(ggrepel)     
 ```
 
 ```{r}
@@ -124,6 +111,7 @@ dds
 #Make sure the 'control' is presented first, a positive gene fold change means that the gene is upregulated in the 'experiment'/second condition relative to the 'control'/first condition
 dds[[Category]]
 ```
+
 ```{r}
 dds <- DESeq(dds)
 ```
@@ -160,6 +148,178 @@ volcano <- EnhancedVolcano(toptable = all_genes_results,              # We use t
                 )
 volcano
 ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "Volcano.png", sep=""), volcano,device = 'png')
+```
+
+
+
+```{r}
+# false discovery rate
+
+# threshold of p = 0.01
+all_genes_results %>% 
+  as.data.frame() %>% 
+  filter(padj < 0.01) %>% 
+  dim()
+```
+```{r}
+# distribution of adjusted p-values
+hist(all_genes_results$padj, col="lightblue", main = "Adjusted p-value distribution")
+
+## should be heavily shifted to 0
+```
+
+
+```{r}
+#Extract the table of diff genes
+
+diff_genes = all_genes_results %>% 
+  as.data.frame() %>% 
+  rownames_to_column("genes") %>% 
+  filter(padj < 0.01) %>% filter(abs(log2FoldChange) > 1) %>%
+  arrange(desc(log2FoldChange), 
+          desc(padj))
+head(diff_genes)
+```
+
+```{r}
+# Export differential gene expression table 
+
+all_genes_results = all_genes_results %>% as.data.frame() %>%  rownames_to_column("genes")
+write.csv(all_genes_results, paste(OutPath, "/", Numer, "Vs", Denom, "DGEGenesAll.csv", sep=""), row.names=FALSE)
+```
+
+
+
+
+```{r}
+vsd <- vst(dds, blind = FALSE)
+rld <- rlog(dds, blind = FALSE )
+```
+
+```{r}
+df <- bind_rows(
+  as_data_frame(log2(counts(dds, normalized=TRUE)[, 1:2]+1)) %>%
+         mutate(transformation = "log2(x + 1)"),
+  as_data_frame(assay(vsd)[, 1:2]) %>% mutate(transformation = "vst"),
+  as_data_frame(assay(rld)[, 1:2]) %>% mutate(transformation = "rlog"))
+  
+colnames(df)[1:2] <- c("x", "y")  
+
+lvls <- c("log2(x + 1)", "vst", "rlog")
+df$transformation <- factor(df$transformation, levels=lvls)
+
+ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
+  coord_fixed() + facet_grid( . ~ transformation)
+```
+
+```{r}
+# Rlog dist matrix
+
+sampleDists <- dist(t(assay(rld)))
+sampleDistMatrix <- as.matrix( sampleDists )
+rownames(sampleDistMatrix) <- paste( rld$Sample, rld$Group, sep = " - " )
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+sampleDistHeatmapRlog <- pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDists,
+         clustering_distance_cols = sampleDists,
+         col = colors)
+sampleDistHeatmapRlog
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "SampleDistMatrixRlog.png", sep=""), sampleDistHeatmapRlog ,device = 'png')
+```
+
+```{r}
+# Pois dist matrix
+
+poisd <- PoissonDistance(t(counts(dds)))
+samplePoisDistMatrix <- as.matrix( poisd$dd )
+rownames(samplePoisDistMatrix) <- paste( dds$Sample, dds$Group, sep=" - " )
+colnames(samplePoisDistMatrix) <- NULL
+sampleDistHeatmapPois <- pheatmap(samplePoisDistMatrix,
+         clustering_distance_rows = poisd$dd,
+         clustering_distance_cols = poisd$dd,
+         col = colors)
+sampleDistHeatmapPois
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "SampleDistMatrixPois.png", sep=""), sampleDistHeatmapPois ,device = 'png')
+```
+
+```{r}
+# vsd PCA
+
+PCAVsd <- plotPCA(vsd, intgroup = "Sample")
+
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "PCAVsd.png", sep=""), PCAVsd ,device = 'png')
+
+PCAVsd
+```
+
+```{r}
+# log PCA
+
+PCARlog <- plotPCA(rld, intgroup = "Sample")
+
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "PCARlog.png", sep=""), PCARlog ,device = 'png')
+
+PCARlog
+```
+
+```{r}
+## to graph principal components other than 1 and 2... 
+
+## Modified plotPCA from DESeq2 package. Shows the Names of the Samples (the first col of SampleTable), and uses ggrepel pkg to plot them.
+# @SA 10.02.2017 
+library(genefilter)
+library(ggplot2)
+library(ggrepel)
+
+plotPCA.san <- function (object, intgroup = "Treatment", ntop = 500, returnData = FALSE) 
+{
+  rv <- rowVars(assay(object))
+  select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, 
+                                                     length(rv)))]
+  pca <- prcomp(t(assay(object)[select, ]))
+  percentVar <- pca$sdev^2/sum(pca$sdev^2)
+  if (!all(intgroup %in% names(colData(object)))) {
+    stop("the argument 'intgroup' should specify columns of colData(dds)")
+  }
+  intgroup.df <- as.data.frame(colData(object)[, intgroup, drop = FALSE])
+  group <- if (length(intgroup) > 1) {
+    factor(apply(intgroup.df, 1, paste, collapse = " : "))
+  }
+  else {
+    colData(object)[[intgroup]]
+  }
+  d <- data.frame(PC2 = pca$x[, 2], PC3 = pca$x[, 3], group = group, 
+                  intgroup.df, name = colData(rld)[,1])
+  if (returnData) {
+    attr(d, "percentVar") <- percentVar[1:2]
+    return(d)
+  }
+    ggplot(data = d, aes_string(x = "PC2", y = "PC3", color = "group", label = "name")) + geom_point(size = 3) + xlab(paste0("PC2: ", round(percentVar[1] * 100), "% variance")) + ylab(paste0("PC3: ", round(percentVar[2] * 100), "% variance")) + coord_fixed() + geom_text_repel(size=3) 
+
+}
+```
+
+```{r}
+plot <-  plotPCA.san(rld, intgroup = "Treatment")
+plot
+```
+
+
+```{r}
+topVarGenes <- head(order(rowVars(assay(rld)), decreasing = TRUE), 25)
+```
+
+```{r}
+# top 25 variable genes heatmap, good for general picture
+
+mat  <- assay(rld)[ topVarGenes, ]
+mat  <- mat - rowMeans(mat)
+anno <- as.data.frame(colData(rld)[, c("Group","Sample")])
+heatmap <- pheatmap(mat, annotation_col = anno, fontsize_row = 6, angle_col = 45)
+heatmap
+
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "Top25DGEHeatmap.png", sep=""), heatmap ,device = 'png')
 ```
 
 
