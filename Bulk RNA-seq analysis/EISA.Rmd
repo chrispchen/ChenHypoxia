@@ -1,0 +1,169 @@
+---
+title: "EISA_github"
+output: html_document
+date: "a date in time"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("C:/your/path/")
+```
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install(c("GenomicFeatures", "AnnotationDbi", "eisaR"))
+
+```
+```{r}
+library(GenomicFeatures)
+library(AnnotationDbi)
+library(eisaR)
+library(tidyverse)
+library(rtracklayer)
+library(QuasR)
+library(Rhisat2)
+library(readxl)
+```
+
+
+```{r}
+# Replace with the path to your own GTF file
+gtf_file <- "C:/your/path/v4.3.2.gtf"
+
+# Create TxDb from GTF
+txdb <- makeTxDbFromGFF(gtf_file, format = "gtf")
+
+```
+
+
+```{r}
+regS <- getRegionsFromTxDb(txdb = txdb, strandedData = TRUE)
+```
+
+```{r}
+regU <- getRegionsFromTxDb(txdb = txdb, strandedData = FALSE)
+```
+
+```{r}
+lengths(regS)
+```
+```{r}
+lengths(regU)
+```
+
+```{r}
+regS$exons
+```
+
+```{r}
+
+export(regS$exons, "hg19sub_exons_stranded.gtf")
+export(regS$genebodies, "hg19sub_genebodies_stranded.gtf")
+```
+
+
+
+```{r}
+sampleFile <- "C:/your/path/sampleFileFull.txt"
+```
+
+```{r}
+read.delim(sampleFile)
+```
+
+
+```{r}
+## Perform the alignment
+proj <- qAlign(sampleFile = sampleFile, 
+               genome = "C:/your/path/danRer11.primary.fa",
+               aligner = "Rhisat2", splicedAlignment = TRUE)
+```
+
+```{r}
+alignmentStats(proj)
+```
+
+```{r}
+cntEx <- qCount(proj, regU$exons, orientation = "any")
+```
+
+
+```{r}
+cntGb <- qCount(proj, regU$genebodies, orientation = "any")
+```
+
+
+```{r}
+cntIn <- cntGb - cntEx
+```
+
+```{r}
+cntEx
+```
+
+
+```{r}
+cntIn
+```
+
+
+```{r}
+
+Lawson <- read_excel("C:/your/path/elife-55792-fig3-data6-v2.xlsx")
+Lawson <- data.frame(Lawson)
+Lawson <- Lawson[, c('LLgeneID', 'EnsdargID', 'ID')]
+colnames(Lawson) <- c('gene_id', 'EnsdargID', 'gene_name')
+head(Lawson)
+```
+
+
+
+```{r}
+Rex <- cntEx[, colnames(cntEx) != "width"]
+Rin <- cntIn[, colnames(cntIn) != "width"]
+```
+
+```{r}
+all(rownames(Rex) %in% Lawson$gene_id)
+```
+```{r}
+setdiff(rownames(Rex), Lawson$gene_id)
+
+```
+
+```{r}
+rownames(Rex) <- trimws(rownames(Rex))
+Lawson$gene_id <- trimws(Lawson$gene_id)
+
+```
+
+```{r}
+all(rownames(Rex) %in% Lawson$gene_id)
+
+```
+```{r}
+common_ids <- intersect(rownames(Rex), Lawson$gene_id)
+Rex <- Rex[common_ids, , drop = FALSE]
+gene_map <- setNames(Lawson$gene_name, Lawson$gene_id)
+rownames(Rex) <- gene_map[rownames(Rex)]
+
+```
+
+
+```{r}
+common_ids <- intersect(rownames(Rin), Lawson$gene_id)
+Rin <- Rin[common_ids, , drop = FALSE]
+gene_map <- setNames(Lawson$gene_name, Lawson$gene_id)
+rownames(Rin) <- gene_map[rownames(Rin)]
+
+```
+
+```{r}
+Rex
+```
