@@ -1,0 +1,165 @@
+---
+title: "Normoxia_6hpfvsHypoxia_18hrs_WT"
+output: html_document
+date: "a date in time"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# I used this as reference point: https://scienceparkstudygroup.github.io/rna-seq-lesson/06-differential-analysis/index.html
+```
+
+```{r}
+# Import libraries
+library("DESeq2")
+library("tidyverse")
+library("ggplot2")
+library("readr")
+library("dplyr")
+library("apeglm")
+library("EnhancedVolcano")
+library("pheatmap")
+library("tibble")
+library("genefilter")
+library("RColorBrewer")
+library("PoiClaClu")
+library("glmpca")
+library("AnnotationDbi")
+library("org.Dr.eg.db")
+library("readxl")
+library("ggbeeswarm")
+library("edgeR")
+library("clusterProfiler")
+library("enrichplot")
+library("pathview")
+library("msigdbr")
+library("babelgene")
+library("pathview")
+library("gage")
+library("gageData")
+```
+
+```{r}
+# Load up our variables, the hard part perhaps
+
+Numer <- "Hypoxia_18hrs_WT" # sample of interest (Numerator)
+Denom <- "Normoxia_6hpf_WT" # what a control should be(Denominator)
+Category <- "Group"
+OutPath <- "C:/your/path/Normoxia_6hpf_WTvsHypoxia_18hrs_WT"
+
+myorder <- c(
+  "a6hpf_REP1" ,         "a6hpf_REP2"    ,      "a6hpf_REP3"      ,    "a6hpf_REP4"  ,       "a6hpf_REP5",
+  "c6hpf_REP1"  ,        "c6hpf_REP2"       ,   "c6hpf_REP3"      ,    "c6hpf_REP4"    ,      "c6hpf_REP5",
+  "nNormoxia_6hpf_WT_1", "nNormoxia_6hpf_WT_2", "nNormoxia_6hpf_WT_3", "nNormoxia_6hpf_WT_4" ,"nNormoxia_6hpf_WT_5" ,
+  "aHypoxia_18hr_REP1"  ,"aHypoxia_18hr_REP2" , "aHypoxia_18hr_REP3" , "aHypoxia_18hr_REP4" , "aHypoxia_18hr_REP5",
+  "cHypoxia_18hr_REP1" ,"cHypoxia_18hr_REP2"  ,"cHypoxia_18hr_REP3" , "cHypoxia_18hr_REP4" , "cHypoxia_18hr_REP5" ,
+  "nHypoxia_18hrs_WT_1" ,"nHypoxia_18hrs_WT_2" ,"nHypoxia_18hrs_WT_3",
+ "nHypoxia_18hrs_WT_4" ,"nHypoxia_18hrs_WT_5"      
+           
+)
+```
+
+```{r}
+# import the samples to conditions correspodence
+xp_design <- read.csv("C:/your/path/SampleSheetTrial.csv", header = T, stringsAsFactors = F, 
+                        colClasses = rep("character",3))
+head(xp_design)
+```
+
+
+```{r}
+# Import the gene raw counts
+raw_counts <- read_tsv("C:/your/path/salmon.merged.gene_counts.tsv") # %>% column_to_rownames("gene_id")
+  
+head(raw_counts)
+```
+
+
+```{r}
+## get Lawson GTF, convert nomenclature
+
+Lawson <- read_excel("C:/your/path/elife-55792-fig3-data6-v2.xlsx")
+Lawson <- data.frame(Lawson)
+Lawson <- Lawson[, c('LLgeneID', 'EnsdargID', 'ID')]
+colnames(Lawson) <- c('gene_id', 'EnsdargID', 'gene_name')
+head(Lawson)
+```
+
+```{r}
+raw_counts <- merge(raw_counts, Lawson, by = "gene_id")
+raw_counts <- raw_counts %>% drop_na()
+raw_counts <- raw_counts[ , !names(raw_counts) %in%
+                            c("gene_id", "gene_name.y", "EnsdargID")]
+raw_counts <- raw_counts %>% group_by(gene_name.x) %>% summarise(across(c(nNormoxia_6hpf_WT_1, nNormoxia_6hpf_WT_2, nNormoxia_6hpf_WT_3, nNormoxia_6hpf_WT_4, nNormoxia_6hpf_WT_5, nNormoxia_8hpf_WT_1, nNormoxia_8hpf_WT_2, nNormoxia_8hpf_WT_3, nNormoxia_8hpf_WT_4, nNormoxia_8hpf_WT_5, nNormoxia_10hpf_WT_1, nNormoxia_10hpf_WT_2, nNormoxia_10hpf_WT_3, nNormoxia_10hpf_WT_4, nNormoxia_10hpf_WT_5, nHypoxia_2hrs_WT_1, nHypoxia_2hrs_WT_2, nHypoxia_2hrs_WT_3, nHypoxia_2hrs_WT_4, nHypoxia_2hrs_WT_5, nHypoxia_2hrs_Tent5ba42_1, nHypoxia_2hrs_Tent5ba42_2, nHypoxia_2hrs_Tent5ba42_3, nHypoxia_2hrs_Tent5ba42_4, nHypoxia_2hrs_Tent5ba42_5, nHypoxia_2hrs_Hif1aDKO_1, nHypoxia_2hrs_Hif1aDKO_2, nHypoxia_2hrs_Hif1aDKO_3, nHypoxia_2hrs_Hif1aDKO_4, nHypoxia_2hrs_Hif1aDKO_5, nHypoxia_18hrs_WT_1, nHypoxia_18hrs_WT_2, nHypoxia_18hrs_WT_3, nHypoxia_18hrs_WT_4, nHypoxia_18hrs_WT_5, nHypoxia_18hrs_Tent5ba42_1, nHypoxia_18hrs_Tent5ba42_2, nHypoxia_18hrs_Tent5ba42_3, nHypoxia_18hrs_Tent5ba42_4, nHypoxia_18hrs_Tent5ba42_5, nReoxy_4hrs_WT_1, nReoxy_4hrs_WT_4, nReoxy_4hrs_WT_5, nReoxy_4hrs_Tent5ba42_1, nReoxy_4hrs_Tent5ba42_2, nReoxy_4hrs_Tent5ba42_3, nReoxy_4hrs_Tent5ba42_4, nReoxy_4hrs_Tent5ba42_5, c6hpf_REP1, c6hpf_REP2, c6hpf_REP3, c6hpf_REP4, c6hpf_REP5, c8hpf_REP1, c8hpf_REP2, c8hpf_REP3, c8hpf_REP4, c8hpf_REP5, cHypoxia_18hr_REP1, cHypoxia_18hr_REP2, cHypoxia_18hr_REP3, cHypoxia_18hr_REP4, cHypoxia_18hr_REP5, cOne1mM_KCN_REP1, cOne1mM_KCN_REP2, cOne1mM_KCN_REP3, cOne1mM_KCN_REP4, cOne1mM_KCN_REP5, a6hpf_REP1, a6hpf_REP2, a6hpf_REP3, a6hpf_REP4, a6hpf_REP5, a8hpf_REP1, a8hpf_REP2, a8hpf_REP3, a8hpf_REP4, a8hpf_REP5, a10hpf_REP1, a10hpf_REP2, a10hpf_REP3, a10hpf_REP4, a10hpf_REP5, aHypoxia_2hr_REP1, aHypoxia_2hr_REP2, aHypoxia_2hr_REP3, aHypoxia_2hr_REP4, aHypoxia_2hr_REP5, aHypoxia_18hr_REP1, aHypoxia_18hr_REP2, aHypoxia_18hr_REP3, aHypoxia_18hr_REP4, aHypoxia_18hr_REP5, aReoxy_1hr_REP1, aReoxy_1hr_REP2, aReoxy_1hr_REP3, aReoxy_1hr_REP4, aReoxy_1hr_REP5, aReoxy_4hr_REP1, aReoxy_4hr_REP2, aReoxy_4hr_REP3, aReoxy_4hr_REP4, aReoxy_4hr_REP5
+
+),sum))
+raw_counts <- raw_counts %>% `row.names<-`(., NULL) %>% column_to_rownames("gene_name.x")
+head(raw_counts)
+```
+
+```{r}
+# filter design file to keep only pertinent samples
+xp_design = xp_design %>% 
+  filter(Group %in% c(Denom, Numer))
+head(xp_design)
+# reorder counts columns according to the complete list of samples 
+raw_counts <- raw_counts[ , xp_design$Sample]
+head(raw_counts)
+# Filter count file accordingly (to keep only samples present in the filtered xp_design file)
+raw_counts_filtered = raw_counts[, colnames(raw_counts) %in% xp_design$Sample]
+head(raw_counts_filtered)
+```
+
+```{r}
+## Creation of the DESeqDataSet
+dds <- DESeqDataSetFromMatrix(countData = round(raw_counts_filtered), 
+                              colData = xp_design, 
+                              design = ~ Group)
+dds
+```
+```{r}
+#Make sure the 'control' is presented first, a positive gene fold change means that the gene is upregulated in the 'experiment'/second condition relative to the 'control'/first condition
+dds[[Category]]
+```
+```{r}
+dds <- DESeq(dds)
+```
+```{r}
+all_genes_results <- results(dds, contrast = c(Category,                      # name of the factor
+                                  Numer,    # name of the numerator level for fold change
+                                  Denom))                          # name of the denominator level    
+
+mcols(all_genes_results)
+resultsnames <- resultsNames(dds)
+```
+```{r}
+resLFC <- lfcShrink(dds = dds, 
+                  res = all_genes_results,
+                  type = "normal",
+                  coef = resultsnames[2]) # name or number of the coefficient (LFC) to shrink
+```
+
+```{r}
+# volcano plot
+volcano <- EnhancedVolcano(toptable = all_genes_results,              # We use the shrunken log2 fold change as noise associated with low count genes is removed 
+                x = "log2FoldChange",           # Name of the column in resLFC that contains the log2 fold changes
+                y = "padj",                     # Name of the column in resLFC that contains the p-value
+                lab = rownames(all_genes_results),
+                xlab = bquote(~Log[2]~ 'fold change'),
+                pCutoff = 0.05,
+                FCcutoff = 1,
+                pointSize = 1.0,
+                labSize = 2.0,
+                title = paste(Numer, " vs. ", Denom, sep = ""),
+                legendLabSize = 4.0,
+                legendIconSize = 1.0,
+                max.overlaps = 50
+                )
+volcano
+ggsave(paste(OutPath, "/", Numer, "Vs", Denom, "Volcano.png", sep=""), volcano,device = 'png')
+```
+
+
