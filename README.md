@@ -12,7 +12,7 @@ More information can be found in the directories below:
 ----
 ### Bulk ATAC-seq
 * [Bulk ATAC-seq preprocessing](Bulk%20ATAC-seq%20preprocessing)
-
+* [Bulk ATAC-seq analysis](Bulk%20ATAC-seq%20analysis)
 ----
 ### scRNA-seq
 * [scRNA-seq preprocessing](scRNA-seq%20preprocessing)
