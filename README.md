@@ -11,6 +11,9 @@ More information can be found in the directories below:
 * [Bulk RNA-seq preprocessing](Bulk%20RNA-seq%20preprocessing)
 
   Nextflow pipeline from FASTQ to gene counts table
+* [Bulk RNA-seq analysis](Bulk%20RNA-seq%20analysis)
+
+  Differential gene expression analysis, condition comparisons, overrepresentation analysis, and exon splice analysis.
 ----
 ### Bulk ATAC-seq
 * [Bulk ATAC-seq preprocessing](Bulk%20ATAC-seq%20preprocessing)
