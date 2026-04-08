@@ -1,7 +1,7 @@
 ---
 title: "EISA_github"
 output: html_document
-date: "a date in time"
+date: "2025-05-20"
 ---
 
 
@@ -29,6 +29,7 @@ library(rtracklayer)
 library(QuasR)
 library(Rhisat2)
 library(readxl)
+library(ggplot2)
 ```
 
 
@@ -166,4 +167,260 @@ rownames(Rin) <- gene_map[rownames(Rin)]
 
 ```{r}
 Rex
+```
+
+
+
+
+```{r}
+selectedTent <- c(
+  'Normoxia_6hpf_WT_1', 'Normoxia_6hpf_WT_2', 'Normoxia_6hpf_WT_3', 'Normoxia_6hpf_WT_4', 'Normoxia_6hpf_WT_5',
+  'Hypoxia_18hrs_Tent5ba42_1', 'Hypoxia_18hrs_Tent5ba42_2', 'Hypoxia_18hrs_Tent5ba42_3', 'Hypoxia_18hrs_Tent5ba42_4', 'Hypoxia_18hrs_Tent5ba42_5'
+)
+
+RexTent <- Rex[, selectedTent]
+RinTent <- Rin[, selectedTent]
+
+
+selectedWT <- c(
+  'Normoxia_6hpf_WT_1', 'Normoxia_6hpf_WT_2', 'Normoxia_6hpf_WT_3', 'Normoxia_6hpf_WT_4', 'Normoxia_6hpf_WT_5',
+ 'Hypoxia_18hrs_WT_1', 'Hypoxia_18hrs_WT_2', 'Hypoxia_18hrs_WT_3', 'Hypoxia_18hrs_WT_4', 'Hypoxia_18hrs_WT_5'
+)
+
+RexWT <- Rex[, selectedWT]
+RinWT <- Rin[, selectedWT]
+
+selectedNorm <- c(
+  'Normoxia_6hpf_WT_1', 'Normoxia_6hpf_WT_2', 'Normoxia_6hpf_WT_3', 'Normoxia_6hpf_WT_4', 'Normoxia_6hpf_WT_5',
+  'Normoxia_8hpf_WT_1', 'Normoxia_8hpf_WT_2', 'Normoxia_8hpf_WT_3', 'Normoxia_8hpf_WT_4', 'Normoxia_8hpf_WT_5'
+)
+
+RexNorm <- Rex[, selectedNorm]
+RinNorm <- Rin[, selectedNorm]
+
+
+```
+
+```{r}
+# Explicit ordering is essential #
+condWT_fixed <- factor(
+  c("Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT",
+    "Hypoxia_18hrs_WT", "Hypoxia_18hrs_WT", "Hypoxia_18hrs_WT", "Hypoxia_18hrs_WT", "Hypoxia_18hrs_WT"),
+  levels = c("Normoxia_6hpf_WT", "Hypoxia_18hrs_WT")  
+)
+
+condTent_fixed <- factor(
+  c("Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT",
+    "Hypoxia_18hrs_Tent5ba42", "Hypoxia_18hrs_Tent5ba42", "Hypoxia_18hrs_Tent5ba42", 
+    "Hypoxia_18hrs_Tent5ba42", "Hypoxia_18hrs_Tent5ba42"),
+  levels = c("Normoxia_6hpf_WT", "Hypoxia_18hrs_Tent5ba42")
+)
+
+condNorm_fixed <- factor(
+  c("Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT", "Normoxia_6hpf_WT",
+    "Normoxia_8hpf_WT", "Normoxia_8hpf_WT", "Normoxia_8hpf_WT", "Normoxia_8hpf_WT", "Normoxia_8hpf_WT"),
+  levels = c("Normoxia_6hpf_WT", "Normoxia_8hpf_WT")
+)
+
+
+```
+
+```{r}
+# run EISA
+
+resWT_fixed <- runEISA(RexWT, RinWT, condWT_fixed)
+resTent_fixed <- runEISA(RexTent, RinTent, condTent_fixed)
+resNorm_fixed <- runEISA(RexNorm, RinNorm, condNorm_fixed)
+```
+
+
+```{r}
+plotEISA(resWT_fixed)
+```
+
+```{r}
+plotEISA(resNorm_fixed)
+```
+
+```{r}
+plotEISA(resTent_fixed)
+```
+
+
+```{r}
+# Save as a one-column CSV
+write.csv(resNorm_fixed$tab.ExIn, file = "Normoxia6hpfto8hpf_eisadiff.csv")
+
+write.csv(resWT_fixed$tab.ExIn, file = "Hypoxia6hpftoHypoxia18hrsWT_eisadiff.csv")
+
+write.csv(resTent_fixed$tab.ExIn, file = "Hypoxia6hpftoHypoxia18hrsT42_eisadiff.csv")
+```
+
+
+
+#####  exon intron histograms
+
+
+```{r}
+# Combine all logFCs into one dataframe
+df_combined <- data.frame(
+  logFC = c(resNorm_fixed$tab.ExIn$logFC, resWT_fixed$tab.ExIn$logFC, resTent_fixed$tab.ExIn$logFC),
+  group = factor(c(
+    rep("6hpf to 8hpf", nrow(resNorm_fixed$tab.ExIn)),
+    rep("6hpf to Hypoxia 18hrs WT", nrow(resWT_fixed$tab.ExIn)),
+    rep("6hpf to Hypoxia 18hrs Tent5ba-42/-42", nrow(resTent_fixed$tab.ExIn))
+  ))
+)
+
+# Kruskal-Wallis test
+kruskal.test(logFC ~ group, data = df_combined)
+
+```
+
+
+```{r}
+
+## plot histogram
+
+
+p <- ggplot(
+  df_combined,
+  aes(x = logFC, fill = group, colour = group)
+) +
+  geom_density(
+    alpha = 0.25,
+    linewidth = 1.5
+  ) +
+  scale_x_continuous(
+    limits = c(-7.5, 7.5),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("#339900", "darkblue", "#66CCFF")
+  ) +
+  scale_colour_manual(
+    values = c("#339900", "darkblue", "#66CCFF")
+  ) +
+  labs(
+    title = "Exon–Intron Changes Across Conditions",
+    x = expression(Delta*log[2]*"FC (Exon – Intron)"),
+    y = "Density"
+  ) +
+  theme_classic(base_size = 28) +
+  theme(
+    plot.title = element_text(size = 34, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 30),
+    axis.text = element_text(size = 26),
+    axis.line = element_line(colour = "black", linewidth = 0.8),
+    axis.ticks = element_line(colour= 'black', lindwidth = 0.8),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 24),
+    legend.position = "right"
+  )
+
+ggsave(
+  filename = "intronexon_bygroup_new_fixed_updated_narrow_thin.tiff",
+  plot = p,
+  width = 15,
+  height = 6,
+  dpi = 300,
+  compression = "lzw"
+)
+
+```
+
+#### intron to exon ratios per gene and global
+
+
+```{r}
+
+group_levels <- c("Normoxia_6hpf_WT", "Normoxia_8hpf_WT",
+                  "Hypoxia_18hrs_WT", "Hypoxia_18hrs_Tent5ba42")
+
+group_colors <- c(
+  "Normoxia_6hpf_WT"        = "#4DAF4A",
+  "Normoxia_8hpf_WT"        = "darkgreen",
+  "Hypoxia_18hrs_WT"        = "#377EB8",
+  "Hypoxia_18hrs_Tent5ba42" = "#003366"
+)
+
+pseudocount <- 1
+
+# Filter out genes that are all zeros in BOTH Rex and Rin across all samples
+
+
+genes_with_data <- rowSums(Rex) > 0 | rowSums(Rin) > 0
+
+Rex_filtered <- Rex[genes_with_data, ]
+Rin_filtered <- Rin[genes_with_data, ]
+
+cat("Genes retained:", sum(genes_with_data), "\n")
+cat("Genes removed (all zeros):", sum(!genes_with_data), "\n\n")
+
+
+# APPROACH 1: Global — sum(intron) / sum(exon) per sample
+
+
+df_global <- data.frame(
+  sample = colnames(Rin_filtered),
+  ratio  = (colSums(Rin_filtered) + pseudocount) / (colSums(Rex_filtered) + pseudocount)
+) %>%
+  mutate(group = factor(str_remove(sample, "_\\d+$"), levels = group_levels))
+
+
+# APPROACH 2: Per-gene ratio — mean(intron/exon) across genes per sample
+
+
+per_gene_ratio <- (Rin_filtered + pseudocount) / (Rex_filtered + pseudocount)
+
+df_gene <- data.frame(
+  sample = colnames(Rin_filtered),
+  ratio  = colMeans(per_gene_ratio, na.rm = TRUE)
+) %>%
+  mutate(group = factor(str_remove(sample, "_\\d+$"), levels = group_levels))
+
+
+# Plot both side by side
+
+
+df_global$method <- "Global: sum(Intron) / sum(Exon)"
+df_gene$method   <- "Per-gene: mean(Intron / Exon)"
+
+df_combined <- bind_rows(df_global, df_gene) %>%
+  mutate(method = factor(method, levels = c(
+    "Global: sum(Intron) / sum(Exon)",
+    "Per-gene: mean(Intron / Exon)"
+  )))
+
+p <- ggplot(df_combined, aes(x = group, y = ratio, fill = group, color = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6, width = 0.5, color = "black") +
+  geom_jitter(width = 0.1, size = 3, alpha = 0.9) +
+  scale_fill_manual(values  = group_colors) +
+  scale_color_manual(values = group_colors) +
+  facet_wrap(~ method, scales = "free_y") +
+  labs(
+    title    = "Intron/Exon Ratio by Condition",
+    subtitle = paste0("Each dot = one sample (pseudocount = ", pseudocount, 
+                      ", genes with any data: ", sum(genes_with_data), ")"),
+    x        = NULL,
+    y        = "Intron/Exon ratio"
+  ) +
+  theme_classic() +
+  theme(
+    text             = element_text(size = 13),
+    plot.title       = element_text(face = "bold", size = 15),
+    axis.text.x      = element_text(angle = 45, hjust = 1, size = 10),
+    strip.text       = element_text(face = "bold", size = 11),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    legend.position  = "none"
+  )
+
+print(p)
+ggsave("intron_exon_ratio_two_methods.png", p, width = 12, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+write.csv(df_combined, 'exonintronratios.csv')
 ```
