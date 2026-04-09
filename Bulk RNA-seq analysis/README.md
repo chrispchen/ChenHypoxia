@@ -7,3 +7,5 @@
 
 
 > Gaidatzis, D., Burger, L., Florescu, M. et al. Analysis of intronic and exonic reads in RNA-seq data characterizes >transcriptional and post-transcriptional regulation. Nat Biotechnol 33, 722–729 (2015). https://doi.org/10.1038/nbt.3269
+
+- [DEEP_Table.ipynb](Deep_Table.ipynb): Google colab notebook aggregating 'DEEP genes' from multiple modalities, including: cNMF GEP 5, scRNA seq psuedobulk, Bulk RNA seq acute (2 hrs) hypoxia, Bulk RNA seq prolonged (18 hrs) hypoxia, Bulk RNA seq, KCN 18 hrs, and Bulk ATAC seq. Also includes a ranking system to identify core DEEP members.
