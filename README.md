@@ -32,5 +32,5 @@ More information can be found in the directories below:
 ### Image analysis
 * [Image analysis](Image%20analysis)
 
-  Morphogen quantification across embryonic axes
+  Post imaris, morphogen quantification across embryonic axes
 ----
