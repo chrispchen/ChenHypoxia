@@ -1,0 +1,328 @@
+---
+title: "MorphogenQuantification"
+output: html_document
+date: "a date in time"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#load libraries
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(rstatix)
+```
+
+
+```{r}
+
+#set out working directory path
+wd = "C:/your/path/"
+
+# get list of folders to do functions on
+alldirs <- list.dirs(path = wd)
+alldirs <- alldirs[-1]
+
+# reset our dataframe
+Agg = data.frame()
+
+for (i in 1:length(alldirs)){
+  
+  #Get path and start importing data from csv
+  trialpath <- alldirs[i]
+  # Get files matching expected patterns
+  ref_file <- list.files(trialpath, pattern = "Position_Reference_Frame\\.csv$", full.names = TRUE)
+  wnt_file <- list.files(trialpath, pattern = "Intensity_Mean_Ch=2_Img=1\\.csv$", full.names = TRUE)
+  bmp_file <- list.files(trialpath, pattern = "Intensity_Mean_Ch=3_Img=1\\.csv$", full.names = TRUE)
+  
+  # Check if all files exist
+  if (length(ref_file) == 1 & length(wnt_file) == 1 & length(bmp_file) == 1) {
+    Ref <- read.csv(ref_file, skip = 3)
+    Wnt <- read.csv(wnt_file, skip = 3)
+    BMP <- read.csv(bmp_file, skip = 3)
+  
+    
+  } else {
+    warning(paste("Missing or ambiguous files in", trialpath))
+    next
+  }
+  
+  #Merge tables together, rename columns for ease
+  Merged <- merge(Ref, Wnt, by= "ID")
+  colnames(Merged)[colnames(Merged) == "Intensity.Mean"] ="BetaCatMean"
+  Merged <- merge(Merged, BMP, by = "ID")
+  colnames(Merged)[colnames(Merged) == "Intensity.Mean"] ="pSmadMean"
+  
+  #make x axis into percent of embyro by decile
+  Merged$decile <- ntile(Merged$Position.X.Reference.Frame, 10)
+  Merged$decile <- Merged$decile*10
+  
+  #calculate mean intensity of beta and smad by decile
+  WntDecile <- data.frame()
+  WntDecile <- Merged %>% group_by(decile) %>% summarise(FluorescenceIntensity = mean(BetaCatMean))
+  WntDecile$Stain <- 'BetaCatenin'
+  SmadDecile <- data.frame()
+  SmadDecile <- Merged %>% group_by(decile) %>% summarise(FluorescenceIntensity = mean(pSmadMean))
+  SmadDecile$Stain <- 'pSmad'
+  
+  #Group
+  if (grepl("6hpf", trialpath, fixed=TRUE) == TRUE) {
+    WntDecile$Group <- 'Normoxia 6hpf'
+  }
+  if (grepl("Hyp18", trialpath, fixed=TRUE) == TRUE) {
+    WntDecile$Group <- 'Hypoxia 18hrs'
+  }
+  
+  #Technical replicate
+  if (grepl("t1_", trialpath, fixed=TRUE) == TRUE) {
+    WntDecile$Tech <- '1'
+  }
+  if (grepl("t2_", trialpath, fixed=TRUE) == TRUE) {
+    WntDecile$Tech <- '2'
+  }
+ # continue for tech replicates...
+  
+  
+  #Add columns together
+  Intensity <- data.frame()
+  Intensity <- rbind(WntDecile, SmadDecile)
+  
+  Agg <- rbind(Agg, Intensity)
+}
+```
+
+
+
+```{r}
+Agg1 <- Agg
+Agg1$together <- paste(Agg1$Group, Agg1$Tech)
+
+```
+
+
+
+```{r}
+Agg2 <- filter(Agg1, Group %in% c('Normoxia 6hpf', 'Hypoxia 18hrs'))
+
+AggBeta <- filter(Agg2, Stain == 'BetaCatenin')
+AggBMP <- filter(Agg2, Stain == 'pSmad')
+```
+
+
+
+
+```{r}
+ggplot(data = Agg1 %>% 
+         filter(Stain == 'pSmad' & Group %in% c('Normoxia 6hpf', 'Hypoxia 18hrs')), 
+       aes(x = decile, y = FluorescenceIntensity, group = together, color = Group)) + 
+  geom_line(size = 0.5) + 
+  scale_color_manual(values = c(
+    'Normoxia 6hpf' = '#339900',   
+    'Hypoxia 18hrs' = '#66CCFF'    
+  )) +
+  labs(y = 'p-SMAD 1/5/9 Nuclear Intensity', x = 'Ventral to Dorsal Position (%)') + 
+  theme_classic() + 
+  theme(
+    axis.line = element_line(colour = "black", size = 1), 
+    text = element_text(size = 15)
+  )
+
+ggsave("pSmadIndividual.png", dpi = 300, height = 4, width = 5, units = "in")
+```
+
+
+
+```{r}
+ggplot(data = Agg1 %>% 
+         filter(Stain == 'BetaCatenin' & Group %in% c('Normoxia 6hpf', 'Hypoxia 18hrs')), 
+       aes(x = decile, y = FluorescenceIntensity, group = together, color = Group)) + 
+  geom_line(size = 0.5) + 
+  scale_color_manual(values = c(
+    'Normoxia 6hpf' = '#339900',   
+    'Hypoxia 18hrs' = '#66CCFF'    
+  )) +
+  labs(y = 'Beta-Catenin Nuclear Intensity', x = 'Margin to margin Position (%)') + 
+  theme_classic() + 
+  theme(
+    axis.line = element_line(colour = "black", size = 1), 
+    text = element_text(size = 15)
+  )
+
+ggsave("BetaCatIndividual.png", dpi = 300, height = 4, width = 5, units = "in")
+```
+
+
+
+
+
+
+
+
+```{r}
+
+# do stats 
+AggBMP %>%
+    group_by(decile) %>%
+    wilcox_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+AggBMPStats <- AggBMP %>%
+    group_by(decile) %>%
+    wilcox_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+write.csv(AggBMPStats, 'BMPStatsWilcox.csv')
+
+
+AggBMP %>%
+    group_by(decile) %>%
+    t_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+AggBMPStats <- AggBMP %>%
+    group_by(decile) %>%
+    t_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+write.csv(AggBMPStats, 'BMPCateninStatsT.csv')
+```
+
+
+
+```{r}
+# stats by decile, 
+
+AggBeta %>%
+    group_by(decile) %>%
+    wilcox_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+AggBetaStatsW <- AggBeta %>%
+    group_by(decile) %>%
+    wilcox_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+write.csv(AggBetaStatsW, 'BetaCateninStatsWilcox.csv')
+
+
+AggBeta %>%
+    group_by(decile) %>%
+    t_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+AggBetaStats <- AggBeta %>%
+    group_by(decile) %>%
+    t_test(FluorescenceIntensity ~ Group) %>% add_significance()
+
+write.csv(AggBetaStats, 'BetaCateninStatsT.csv')
+```
+
+
+
+```{r}
+
+
+# Wilcoxon results with significance labels
+stats_df <- AggBMP %>%
+  group_by(decile) %>%
+  wilcox_test(FluorescenceIntensity ~ Group) %>%
+  add_significance() %>%
+  select(decile, p, p.signif) 
+
+# vertical placement for the asterisks
+stats_df <- stats_df %>%
+  mutate(y_pos = max(AggBMP$FluorescenceIntensity) * 0.65)
+
+
+```
+
+```{r}
+# plot curves
+
+stats_df <- stats_df %>%
+  mutate(p.signif = ifelse(p.signif == "ns", "", p.signif))
+
+ggplot(data = Agg1 %>% 
+         filter(Stain == 'pSmad' & Group %in% c('Normoxia 6hpf', 'Hypoxia 18hrs')), 
+       aes(x = decile, y = FluorescenceIntensity, group = Group, color = Group)) + 
+  geom_smooth(method = "loess") + 
+  geom_text(data = stats_df,
+            aes(x = decile, y = y_pos, label = p.signif),
+            inherit.aes = FALSE,
+            size = 6,
+            angle = 90) +
+  scale_color_manual(values = c(
+    'Normoxia 6hpf' = '#339900',   
+    'Hypoxia 18hrs' = '#66CCFF'    
+  )) +
+  labs(y = 'p-SMAD 1/5/9 Nuclear Intensity', 
+       x = 'Ventral to Dorsal Position (%)') + 
+  theme_classic() + 
+  theme(
+    axis.line = element_line(colour = "black", size = 1), 
+    text = element_text(size = 15)
+  )
+
+ggsave("SmoothpSMAD158WithStats.png", dpi = 300, height = 4, width = 5, units = "in")
+
+```
+
+
+
+
+##### for beta catenin
+
+
+
+
+```{r}
+
+
+# Wilcoxon results with significance labels
+stats_df <- AggBeta %>%
+  group_by(decile) %>%
+  wilcox_test(FluorescenceIntensity ~ Group) %>%
+  add_significance() %>%
+  select(decile, p, p.signif)  
+
+# vertical placement for the asterisks
+stats_df <- stats_df %>%
+  mutate(y_pos = max(AggBeta$FluorescenceIntensity) * 1.05)
+
+
+```
+
+```{r}
+
+
+# Modify stats_df to replace "ns" with empty string
+stats_df <- stats_df %>%
+  mutate(p.signif = ifelse(p.signif == "ns", "", p.signif))
+
+ggplot(data = Agg1 %>% 
+         filter(Stain == 'BetaCatenin' & Group %in% c('Normoxia 6hpf', 'Hypoxia 18hrs')), 
+       aes(x = decile, y = FluorescenceIntensity, group = Group, color = Group)) + 
+  geom_smooth(method = "loess") + 
+  geom_text(data = stats_df,
+            aes(x = decile, y = y_pos, label = p.signif),
+            inherit.aes = FALSE,
+            size = 6,
+            angle = 90) +  # Rotate text 90 degrees
+  scale_color_manual(values = c(
+    'Normoxia 6hpf' = '#339900',   
+    'Hypoxia 18hrs' = '#66CCFF'    
+  )) +
+  labs(y = 'Beta-Catenin Nuclear Intensity', 
+       x = 'Ventral to Dorsal Position (%)') + 
+  theme_classic() + 
+  theme(
+    axis.line = element_line(colour = "black", size = 1), 
+    text = element_text(size = 15)
+  )
+ggsave("SmoothBetaCateninWithStats.png", dpi = 300, height = 4, width = 5, units = "in")
+```
+
+
+
+
+
+
