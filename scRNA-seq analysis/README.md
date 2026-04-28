@@ -5,5 +5,5 @@
 
 - [cNMF.ipynb](cNMF.ipynb): Google colab notebook, classification of identity and activity gene expression programs using consensus non-negative matrix factorization (cNMF). This notebook heavily relies on code from Dylan Kotliar's [code ocean](https://codeocean.com/capsule/6314882/tree/v1), [github](https://github.com/dylkot/cNMF), and [manuscript](https://doi.org/10.7554/eLife.43803)
 
-- [Psuedobulk_DifferentialGeneExpression.ipynb](Psuedobulk_DifferentialGeneExpression.ipynb): Google colab notebook, performing psuedobulk differential gene expression analysis using [PyDEseq2](https://github.com/scverse/PyDESeq2) on embyros at normoxia 6 hpf and hypoxia 2 hrs.
+- [Pseudobulk_DifferentialGeneExpression.ipynb](Pseudobulk_DifferentialGeneExpression.ipynb): Google colab notebook, performing psuedobulk differential gene expression analysis using [PyDEseq2](https://github.com/scverse/PyDESeq2) on embyros at normoxia 6 hpf and hypoxia 2 hrs.
   
