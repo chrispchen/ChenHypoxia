@@ -25,6 +25,11 @@ More information can be found in the directories below:
 ----
 ### scRNA-seq
 * [scRNA-seq preprocessing](scRNA-seq%20preprocessing)
+
+  Parse's splitpipe pipeline, and basic preprocessing and quality filtering
+* [scRNA-seq analysis](scRNA-seq%20analysis)
+
+  Cell type annotations, harmonziation, basic plotting, differential gene expression, gene expression program identification, and Euclidean principal component analysis
 ----
 ### Nano3p-seq
 * [Nano3p-seq preprocessing](Nano3p-seq%20preprocessing)
