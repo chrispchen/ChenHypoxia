@@ -29,7 +29,7 @@ More information can be found in the directories below:
   Parse's splitpipe pipeline, and basic preprocessing and quality filtering
 * [scRNA-seq analysis](scRNA-seq%20analysis)
 
-  Cell type annotations, harmonziation, basic plotting, differential gene expression, gene expression program identification, and Euclidean principal component analysis
+  Cell type annotations, harmonziation, basic plotting, differential gene expression, gene expression program identification, and Euclidean principal component distance analysis
 ----
 ### Nano3p-seq
 * [Nano3p-seq preprocessing](Nano3p-seq%20preprocessing)
