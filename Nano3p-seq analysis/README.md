@@ -4,4 +4,4 @@
  
 * [DifferentialPolyadenylation.ipynb](DifferentialPolyadenylation.ipynb): Google colab notebook containing a function to conduct differential polyadenylation between two groups. This notebook compares wildtype embryos in Normoxia 6hpf vs. Hypoxia 18hrs as an example use case
 
-* [DifferentialPolyadenylation.ipynb](DifferentialPolyadenylation.ipynb): Google colab notebook featuring differential polyadenylation analyses across conditions and genotypes, including plots of differential polyadenylation vs gene expression and counts, over-representation analysis, poly(A) tail length distribution histograms, and beeswarm plots 
+* [DifferentialPolyadenylationPlots.ipynb](DifferentialPolyadenylationPlots.ipynb): Google colab notebook featuring differential polyadenylation analyses across conditions and genotypes, including plots of differential polyadenylation vs gene expression and counts, over-representation analysis, poly(A) tail length distribution histograms, and beeswarm plots 
