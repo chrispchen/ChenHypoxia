@@ -1,8 +1,9 @@
 # ChenHypoxia
 
-**This is a repository for the scripts used in this paper XXXXX**
+**This is a repository for the scripts used in:**
 
-#### Reference goes here
+#### Chen, C. P., Greenfeld, H., Foust, S., & Wagner, D. (2026). Dynamic polyadenylation safeguards developmental trajectories during paused embryogenesis. In bioRxiv (p. 2026.05.18.726068). bioRxiv. https://doi.org/10.64898/2026.05.18.726068
+
 
 More information can be found in the directories below:
 
